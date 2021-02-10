@@ -34,7 +34,7 @@ class Product(SafeDeleteModel):
             int -- Number items on completed orders
         """
         sold = OrderProduct.objects.filter(
-            product=self, order__payment_type__isnull=False)
+            product=self, product_id=self.id)
         return sold.count()
 
     @property
