@@ -2,6 +2,7 @@
 import datetime
 from django.http import HttpResponseServerError
 from django.contrib.auth.models import User
+from django.http.response import Http404
 from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -61,9 +62,11 @@ class Profile(ViewSet):
             }
         """
         try:
-            current_user = Customer.objects.get(user=request.user)
+            current_user = Customer.objects.get(user=request.auth.user)
             serializer = ProfileSerializer(current_user, many=False, context={'request': request})
             return Response(serializer.data)
+        except AttributeError:
+            raise Http404
         except Exception as ex:
             return HttpResponseServerError(ex)
 
