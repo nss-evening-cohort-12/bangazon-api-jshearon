@@ -289,24 +289,40 @@ class Profile(ViewSet):
             return Response(serializer.data)
         
         if request.method == "POST":
-            favorite = Favorite()
+            favorite = {}
 
             try:
-                favorite.customer = Customer.objects.get(user=request.auth.user)
-                favorite.seller = Customer.objects.get(pk=request.data["seller"])
-                serializer = FavoriteSerializer(
+                customer = Customer.objects.get(user=request.auth.user)
+                seller = Customer.objects.get(pk=request.data["seller"])
+                favorite['customer'] = customer.id
+                favorite['seller'] = seller.id
+                serializer = FavoriteSellerValidSerializer(
                     data=favorite, context={'request': request})
                 if serializer.is_valid(raise_exception=True):
-                    favorite.save()
+                    serializer.save()
                     return Response(serializer.data)
             except Customer.DoesNotExist as ex:
                 return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
             except ValidationError as ex:
                 return Response({"reason": ex.message}, status=status.HTTP_400_BAD_REQUEST)
             
+class FavoriteSellerValidSerializer(serializers.ModelSerializer):
+    def validate(self, data):
+            if data.get('customer') == data.get('seller'):
+                raise serializers.ValidationError("Customer cannot favorite themselves")
+            return data
+    class Meta:
 
-            
-
+        model = Favorite
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Favorite.objects.all(),
+                fields=['customer', 'seller'],
+                message="Customer can only favorite a seller once"
+            )
+        ]
+        fields = ('id', 'customer', 'seller')
+        depth = 0
 
 
 class LineItemSerializer(serializers.HyperlinkedModelSerializer):
@@ -391,12 +407,5 @@ class FavoriteSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Favorite
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Favorite.objects.all(),
-                fields=['customer', 'seller'],
-                message="Customer can only favorite a seller once"
-            )
-        ]
         fields = ('id', 'seller')
         depth = 2
