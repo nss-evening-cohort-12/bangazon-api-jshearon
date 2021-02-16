@@ -29,6 +29,18 @@ class OrderTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+        #Create a payment type
+        url = "/paymenttypes"
+        data = {
+            "merchant_name": "Amex",
+            "account_number": "000000000000",
+            "expiration_date": "2023-12-12",
+            "create_date": "2020-12-12"
+        }
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
 
     def test_add_product_to_order(self):
         """
@@ -79,6 +91,58 @@ class OrderTests(APITestCase):
         self.assertEqual(json_response["size"], 0)
         self.assertEqual(len(json_response["lineitems"]), 0)
 
-    # TODO: Complete order by adding payment type
+    def add_item(self):
+            url = "/cart"
+            data = { "product_id": 1 }
+            self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+            response = self.client.post(url, data, format='json')
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def get_cart(self):
+            url = "/profile/cart"
+            self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+            response = self.client.get(url, None, format='json')
+            json_response = json.loads(response.content)
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            return json_response["id"]
+
+    def test_line_item_new_order(self):
+        #add item to cart
+        self.add_item()
+
+        #get cart
+        
+        self.assertEqual(self.get_cart(), 1)
+
+        #close cart
+
+    def test_complete_order(self):
+
+        #Create an order
+        self.test_add_product_to_order()
+
+        #Update payment type on order
+        url = "/orders/1"
+        data = { "payment_type": 1 }
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        response = self.client.put(url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        #add another item
+        self.add_item()
+
+        #get cart again
+        self.assertNotEqual(self.get_cart(), 1)
+
+        #Get Cart and verify payment_type is not Null
+        url = "/orders/1"
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        response = self.client.get(url, None, format='json')
+        json_response = json.loads(response.content)
+        self.assertIsNotNone(json_response["payment_type"])
+
 
     # TODO: New line item is not added to closed order
