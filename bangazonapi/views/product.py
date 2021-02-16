@@ -2,14 +2,17 @@
 import base64
 from django.core.files.base import ContentFile
 from django.http import HttpResponseServerError
+from rest_framework.decorators import action
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework import status
-from bangazonapi.models import Product, Customer, ProductCategory
+from bangazonapi.models import Product, Customer, ProductCategory, ProductLike
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.exceptions import ValidationError
+from rest_framework.validators import UniqueTogetherValidator
+
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -291,3 +294,47 @@ class Products(ViewSet):
         serializer = ProductSerializer(
             products, many=True, context={'request': request})
         return Response(serializer.data)
+
+    @action(methods=['post', 'delete'], detail=True)
+    def like(self, request, pk=None):
+        if request.method == "POST":
+            like = {}
+
+            try:
+                customer = Customer.objects.get(user=request.auth.user)
+                product = Product.objects.get(pk=pk)
+                like['customer'] = customer.id
+                like['product'] = product.id
+                serializer = ProductLikeSerializer(
+                    data=like, context={'request': request})
+                if serializer.is_valid(raise_exception=True):
+                    serializer.save()
+                    return Response(serializer.data)
+            except Product.DoesNotExist as ex:
+                return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+            except ValidationError as ex:
+                return Response({"reason": ex.message}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if request.method == "DELETE":
+            customer = Customer.objects.get(user=request.auth.user)
+            try:
+                like = ProductLike.objects.get(customer=customer, product=pk)
+                like.delete()
+                return Response({}, status=status.HTTP_204_NO_CONTENT)
+
+            except ProductLike.DoesNotExist as ex:
+                return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+            except Exception as ex:
+                return Response({'message': ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ProductLikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductLike
+        validators = [
+            UniqueTogetherValidator(
+                queryset=ProductLike.objects.all(),
+                fields=['customer', 'product'],
+                message="Customer can't like a product more than once"
+            )
+        ]
+        fields = ('id', 'customer', 'product')
