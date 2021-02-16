@@ -11,6 +11,9 @@ from rest_framework.viewsets import ViewSet
 from bangazonapi.models import Order, Customer, Product, OrderProduct, Favorite
 from .product import ProductSerializer
 from .order import OrderSerializer
+from rest_framework.validators import UniqueTogetherValidator
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 
 class Profile(ViewSet):
     """Request handlers for user profile info in the Bangazon Platform"""
@@ -229,7 +232,7 @@ class Profile(ViewSet):
 
         return Response({}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    @action(methods=['get'], detail=False)
+    @action(methods=['get', 'post'], detail=False)
     def favoritesellers(self, request):
         """
         @api {GET} /profile/favoritesellers GET favorite sellers
@@ -277,12 +280,49 @@ class Profile(ViewSet):
                 }
             ]
         """
-        customer = Customer.objects.get(user=request.auth.user)
-        favorites = Favorite.objects.filter(customer=customer)
+        if request.method == "GET":
+            customer = Customer.objects.get(user=request.auth.user)
+            favorites = Favorite.objects.filter(customer=customer)
 
-        serializer = FavoriteSerializer(
-            favorites, many=True, context={'request': request})
-        return Response(serializer.data)
+            serializer = FavoriteSerializer(
+                favorites, many=True, context={'request': request})
+            return Response(serializer.data)
+        
+        if request.method == "POST":
+            favorite = {}
+
+            try:
+                customer = Customer.objects.get(user=request.auth.user)
+                seller = Customer.objects.get(pk=request.data["seller"])
+                favorite['customer'] = customer.id
+                favorite['seller'] = seller.id
+                serializer = FavoriteSellerValidSerializer(
+                    data=favorite, context={'request': request})
+                if serializer.is_valid(raise_exception=True):
+                    serializer.save()
+                    return Response(serializer.data)
+            except Customer.DoesNotExist as ex:
+                return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+            except ValidationError as ex:
+                return Response({"reason": ex.message}, status=status.HTTP_400_BAD_REQUEST)
+            
+class FavoriteSellerValidSerializer(serializers.ModelSerializer):
+    def validate(self, data):
+            if data.get('customer') == data.get('seller'):
+                raise serializers.ValidationError("Customer cannot favorite themselves")
+            return data
+    class Meta:
+
+        model = Favorite
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Favorite.objects.all(),
+                fields=['customer', 'seller'],
+                message="Customer can only favorite a seller once"
+            )
+        ]
+        fields = ('id', 'customer', 'seller')
+        depth = 0
 
 
 class LineItemSerializer(serializers.HyperlinkedModelSerializer):
