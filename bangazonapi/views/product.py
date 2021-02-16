@@ -2,6 +2,7 @@
 import base64
 from django.core.files.base import ContentFile
 from django.http import HttpResponseServerError
+from rest_framework.decorators import action
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers
@@ -10,6 +11,7 @@ from bangazonapi.models import Product, Customer, ProductCategory
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.exceptions import ValidationError
+
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -291,3 +293,10 @@ class Products(ViewSet):
         serializer = ProductSerializer(
             products, many=True, context={'request': request})
         return Response(serializer.data)
+
+    @action(methods=['post', 'delete'], detail=True)
+    def like(self, request, pk=None):
+        customer = Customer.objects.get(user=request.auth.user)
+        product = Product.objects.get(pk=pk)
+        if request.method == 'POST':
+            return Response({"product": product.id})
