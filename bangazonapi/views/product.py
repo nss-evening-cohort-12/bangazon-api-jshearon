@@ -334,8 +334,7 @@ class ProductLikeSerializer(serializers.ModelSerializer):
             UniqueTogetherValidator(
                 queryset=ProductLike.objects.all(),
                 fields=['customer', 'product'],
-                message="Customer can like a product more than once"
+                message="Customer can't like a product more than once"
             )
         ]
         fields = ('id', 'customer', 'product')
-        depth = 0
