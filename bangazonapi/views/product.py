@@ -7,7 +7,7 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework import status
-from bangazonapi.models import Product, Customer, ProductCategory, ProductLike
+from bangazonapi.models import Product, Customer, ProductCategory, ProductLike, ProductRating
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.exceptions import ValidationError
@@ -329,6 +329,39 @@ class Products(ViewSet):
             except Exception as ex:
                 return Response({'message': ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(methods=['post', 'delete'], detail=True)
+    def rating(self, request, pk=None):
+        if request.method == "POST":
+            rating = {}
+
+            try:
+                customer = Customer.objects.get(user=request.auth.user)
+                product = Product.objects.get(pk=pk)
+                rating['customer'] = customer.id
+                rating['product'] = product.id
+                rating['rating'] = request.data['rating']
+                serializer = ProductRatingSerializer(
+                    data=rating, context={'request': request})
+                if serializer.is_valid(raise_exception=True):
+                    serializer.save()
+                    return Response(serializer.data)
+            except Product.DoesNotExist as ex:
+                return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+            except ValidationError as ex:
+                return Response({"reason": ex.message}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if request.method == "DELETE":
+            customer = Customer.objects.get(user=request.auth.user)
+            try:
+                rating = ProductRating.objects.get(customer=customer, product=pk)
+                rating.delete()
+                return Response({}, status=status.HTTP_204_NO_CONTENT)
+
+            except ProductRating.DoesNotExist as ex:
+                return Response({'message': ex.args[0]}, status=status.HTTP_404_NOT_FOUND)
+            except Exception as ex:
+                return Response({'message': ex.args[0]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class ProductLikeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductLike
@@ -340,3 +373,15 @@ class ProductLikeSerializer(serializers.ModelSerializer):
             )
         ]
         fields = ('id', 'customer', 'product')
+
+class ProductRatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductRating
+        validators = [
+            UniqueTogetherValidator(
+                queryset=ProductLike.objects.all(),
+                fields=['customer', 'product'],
+                message="Customer can't rate a product more than once"
+            )
+        ]
+        fields = ('id', 'customer', 'product', 'rating')
