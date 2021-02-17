@@ -114,4 +114,35 @@ class ProductTests(APITestCase):
         json_response = json.loads(response.content)
         self.assertEqual(json_response["msg"], "Product not found")
 
-    # TODO: Product can be rated. Assert average rating exists.
+    def test_rate_product(self):
+
+        #create a product
+        self.test_create_product()
+
+        #create a second user (to add another rating to test average)
+        url = "/register"
+        data = {"username": "jonathan", "password": "Admin8*", "email": "jonathan@js.com",
+                "address": "100 Infinity Way", "phone_number": "555-1212", "first_name": "Jonathan", "last_name": "Shearon"}
+        response = self.client.post(url, data, format='json')
+        json_response = json.loads(response.content)
+        self.token2 = json_response["token"]
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        #rate product twice
+        url = "/products/1/rating"
+        data = {"rating": 3}
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        url = "/products/1/rating"
+        data = {"rating": 5}
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token2)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        #get product and check average
+        url = "/products/1"
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        response = self.client.get(url, None, format='json')
+        self.assertEqual(response.data["average_rating"], 4)        
