@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+  <style>
+table {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+</style>
+    <meta charset="utf-8">
+    <title>Bangazon Reports - Products $1000 or more</title>
+  </head>
+  <body>
+    <h1>Products That Cost $1000 Or More</h1>
+  <table>
+  <tr>
+    <th>Id</th>
+    <th>Description</th>
+    <th>Quantity</th>
+    <th>Created Date</th>
+    <th>Location</th>
+    <th>Price</th>
+    <th>Category</th>
+    <th>Customer</th>
+  </tr>
+  {% for product in products_list %}
+    <tr>
+    <td>{{ product.id }}</td>
+    <td>{{ product.description }}</td>
+    <td>{{ product.quantity }}</td>
+    {% load formatting_filters %}
+    <td>{{ product.created_date | prettydate }}</td>
+    <td>{{ product.location }}</td>
+    <td>{{ product.price | currency }}</td>
+    <td>{{ product.category }}</td>
+    <td>{{ product.fullname }}</td>
+    </tr>
+  {% endfor %}
+    <table>
+  </body>
+</html>

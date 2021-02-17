@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import usergame_list
+from .views import products_over_1000
 
 urlpatterns = [
-    path('reports/usergames', usergame_list),
+    path('reports/expensiveproducts', products_over_1000),
 ]
