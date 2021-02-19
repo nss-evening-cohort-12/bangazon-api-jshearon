@@ -4,7 +4,7 @@ from bangazonapi.models import Product
 from bangazonreports.views import Connection
 
 
-def products_over_1000(request):
+def products_under_1000(request):
     if request.method == 'GET':
         with sqlite3.connect(Connection.db_path) as conn:
             conn.row_factory = sqlite3.Row
@@ -25,7 +25,7 @@ def products_over_1000(request):
                 LEFT JOIN bangazonapi_productcategory cat ON p.category_id = cat.id
                 LEFT JOIN bangazonapi_customer cust ON p.customer_id = cust.id
                 LEFT JOIN auth_user u ON cust.user_id = u.id
-                WHERE p.price >= 1000
+                WHERE p.price < 1000
             """)
 
             dataset = db_cursor.fetchall()
@@ -46,13 +46,13 @@ def products_over_1000(request):
 
                 
         # Get only the values from the dictionary and create a list from them
-        list_of_products_over_1000 = products.values()
+        list_of_products_under_1000 = products.values()
 
         # Specify the Django template and provide data context
         template = 'products/products_by_price.html'
         context = {
-            'report_title': 'Products Over $1000.00',
-            'products_list': list_of_products_over_1000
+            'report_title': 'Products Under $1000.00',
+            'products_list': list_of_products_under_1000
         }
 
         return render(request, template, context)
