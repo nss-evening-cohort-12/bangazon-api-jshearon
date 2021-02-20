@@ -11,8 +11,8 @@ def favorited_sellers(request):
             db_cursor = conn.cursor()
             db_cursor.execute("""
               SELECT
-	              cust.first_name || cust.last_name AS customer_name,
-                fav.first_name || fav.last_name AS favorite_name
+	              cust.first_name || ' ' || cust.last_name AS customer_name,
+                fav.first_name || ' ' || fav.last_name AS favorite_name
               FROM 
                 bangazonapi_favorite f
               JOIN  
