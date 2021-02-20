@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+  <style>
+table {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+</style>
+    <meta charset="utf-8">
+    <title>Bangazon Reports - {{ report_title }}</title>
+  </head>
+  <body>
+    <h1>{{ report_title }}</h1>
+  <table>
+  <tr>
+    <th>Order Id</th>
+    <th>Full Name</th>
+    <th>Order Total</th>
+    <th>Payment Type</th>
+  </tr>
+  {% for orders in orders_list %}
+    <tr>
+    <td>{{ orders.orderid }}</td>
+    <td>{{ orders.fullname }}</td>
+    {% load formatting_filters %}
+    <td>{{ orders.total | currency }}</td>
+    <td>{{ orders.payment_type }}</td>
+    </tr>
+  {% endfor %}
+    <table>
+  </body>
+</html>
