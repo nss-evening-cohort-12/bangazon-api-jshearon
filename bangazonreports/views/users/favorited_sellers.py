@@ -11,30 +11,41 @@ def favorited_sellers(request):
             db_cursor = conn.cursor()
             db_cursor.execute("""
               SELECT
-	              u.first_name || u.last_name AS fullname, 
-                
+	              cust.first_name || cust.last_name AS customer_name,
+                fav.first_name || fav.last_name AS favorite_name
+              FROM 
+                bangazonapi_favorite f
+              JOIN  
+                bangazonapi_customer c ON c.id = f.customer_id
+              JOIN 
+                auth_user cust ON c.user_id = cust.id
+              JOIN 
+                bangazonapi_customer c2 ON c2.id = f.seller_id
+              JOIN 
+                auth_user fav ON c2.user_id = fav.id
             """)
 
             dataset = db_cursor.fetchall()
 
-            sellers = {}
+            favorites = {}
 
             for row in dataset:
-              rowid = row["orderid"]
-              sellers[rowid] = {}
-              sellers[rowid]["orderid"] = rowid
-              sellers[rowid]["fullname"] = row["fullname"]
-              sellers[rowid]["total"] = row["total"]
-              sellers[rowid]["payment_type"] = row["payment_type"]
+              customer = row['customer_name']
+              if customer in favorites:
+                favorites[customer].append(row['favorite_name'])
+              else:
+                favorites[customer] = []
+                favorites[customer].append(row['favorite_name'])
+
                 
         # Get only the values from the dictionary and create a list from them
-        list_of_favorite_sellers = sellers.values()
+        list_of_favorites = favorites
 
         # Specify the Django template and provide data context
-        template = 'users/favorites_sellers.html'
+        template = 'users/favorited_sellers.html'
         context = {
             'report_title': 'Favorited Sellers By User',
-            'sellers_list': list_of_favorite_sellers
+            'favorites_list': list_of_favorites
         }
 
         return render(request, template, context)
